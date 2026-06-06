@@ -139,23 +139,23 @@
             margin: 0 auto;
         }
         
-.wheel {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 5px solid white;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    /* IMPORTANT: This transition makes the spin smooth */
-    transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99); 
-    background: conic-gradient(
-        #ff6b6b 0deg 60deg,
-        #ffeaa7 60deg 120deg,
-        #55efc4 120deg 180deg,
-        #a29bfe 180deg 240deg,
-        #fd79a8 240deg 300deg,
-        #74b9ff 300deg 360deg
-    );
-}
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 5px solid white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            /* Transition is required for animation */
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99); 
+            background: conic-gradient(
+                #ff6b6b 0deg 60deg,
+                #ffeaa7 60deg 120deg,
+                #55efc4 120deg 180deg,
+                #a29bfe 180deg 240deg,
+                #fd79a8 240deg 300deg,
+                #74b9ff 300deg 360deg
+            );
+        }
 
         .wheel-pointer {
             position: absolute;
@@ -329,7 +329,7 @@
                     <div class="wheel-pointer"></div>
                     <div class="wheel" id="wheel"></div>
                 </div>
-                <button class="btn btn-primary" id="spin-btn">SPIN NOW</button>
+                <button class="btn btn-primary" id="spin-btn" onclick="game.spinWheel()">SPIN NOW</button>
             </div>
         </div>
     </div>
@@ -339,7 +339,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content text-center py-4">
                 <h3 data-i18n="game_mystery_title">Mystery Box</h3>
-                <p data-i18n="game_mystery_desc">Pick a box to reveal your prize!</p>
+                <p data-i18n="game_mystery_desc">Cost: 50 Pts | 1 Play per Week</p>
                 <div class="d-flex justify-content-center gap-3 my-4">
                     <div class="game-box p-4" onclick="game.openBox(1)">🎁</div>
                     <div class="game-box p-4" onclick="game.openBox(2)">🎁</div>
@@ -350,10 +350,8 @@
         </div>
     </div>
 
-<!-- === ADD THIS LINE HERE === -->
+    <!-- Bootstrap 5 JS Bundle (CRITICAL FIX: Required for Modals) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- ========================= -->
-
 
     <script>
         /* =======================================================
@@ -363,7 +361,7 @@
         // --- White Label Configuration ---
         const APP_CONFIG = {
             restaurantName: "Burger House",
-            logoUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075977.png", // Placeholder
+            logoUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075977.png",
             primaryColor: "#ff6b6b",
             currency: "USD",
             orderingEnabled: true,
@@ -372,8 +370,8 @@
 
         // --- Supabase Configuration (Placeholder for User) ---
         const SUPABASE_CONFIG = {
-            url: "", // "https://xyz.supabase.co"
-            key: ""  // "eyJhbGci..."
+            url: "", 
+            key: "" 
         };
 
         // --- Translations ---
@@ -402,17 +400,18 @@
             }
         };
 
-    // --- State Management ---
-    const state = {
-        lang: localStorage.getItem('lang') || 'en',
-        cart: JSON.parse(localStorage.getItem('cart')) || [],
-        // FIX: Ensure points and login date are initialized if missing
-        userPoints: parseInt(localStorage.getItem('userPoints')) || 0,
-        lastLogin: localStorage.getItem('lastLogin') || null, 
-        products: [], 
-        orders: [],   
-        currentView: 'home'
-    };
+        // --- State Management (Updated with Game Dates) ---
+        const state = {
+            lang: localStorage.getItem('lang') || 'en',
+            cart: JSON.parse(localStorage.getItem('cart')) || [],
+            userPoints: parseInt(localStorage.getItem('userPoints')) || 0,
+            lastLogin: localStorage.getItem('lastLogin') || null,
+            lastSpinDate: localStorage.getItem('lastSpinDate') || null,
+            lastBoxDate: localStorage.getItem('lastBoxDate') || null,
+            products: [], 
+            orders: [],   
+            currentView: 'home'
+        };
 
         // --- Data Service (Supabase or LocalStorage Fallback) ---
         const DataService = {
@@ -450,7 +449,6 @@
                 state.orders = JSON.parse(localStorage.getItem('mock_orders'));
             },
 
-            // Generic Fetch Wrapper
             async fetchProducts() {
                 if (this.supabase) {
                     const { data, error } = await this.supabase.from('products').select('*');
@@ -517,7 +515,6 @@
                 state.lang = state.lang === 'en' ? 'ar' : 'en';
                 localStorage.setItem('lang', state.lang);
                 this.applyLanguage();
-                // Re-render current view to apply dynamic content changes (e.g., product names)
                 this.router(state.currentView); 
             },
 
@@ -557,7 +554,6 @@
                    $(`.mobile-nav-item[onclick="app.router('${view}')"]`).addClass('active');
                 }
                 
-                // Scroll top
                 window.scrollTo(0,0);
             },
 
@@ -570,7 +566,6 @@
                 
                 this.saveCart();
                 
-                // Visual feedback
                 const btn = $(`#add-btn-${productId}`);
                 const originalText = btn.html();
                 btn.html('<i class="fas fa-check"></i>');
@@ -623,7 +618,6 @@
 
             renderMenu($container) {
                 const isAr = state.lang === 'ar';
-                // Unique categories
                 const categories = [...new Set(state.products.map(p => p.category))];
                 
                 let html = `
@@ -641,7 +635,6 @@
             filterMenu(cat, el) {
                 $('.category-pill').removeClass('active');
                 $(el).addClass('active');
-                
                 const filtered = cat === 'All' ? state.products : state.products.filter(p => p.category === cat);
                 $('#menu-grid').html(filtered.map(p => this.productCard(p)).join(''));
             },
@@ -669,18 +662,14 @@
             showProductModal(id) {
                 const p = state.products.find(x => x.id === id);
                 const name = state.lang === 'ar' && p.name_ar ? p.name_ar : p.name;
-                
                 $('#modal-img').attr('src', p.img);
                 $('#modal-title').text(name);
                 $('#modal-desc').text(p.category);
                 $('#modal-price').text(app.formatPrice(p.price));
-                
-                // Unbind old click to prevent duplicates
                 $('#modal-add-btn').off('click').on('click', () => {
                     app.addToCart(id);
                     $('#productModal').modal('hide');
                 });
-                
                 $('#productModal').modal('show');
             },
 
@@ -690,9 +679,7 @@
                     $container.html(`<div class="text-center py-5"><i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i><p>${isAr ? 'السلة فارغة' : 'Cart is empty'}</p></div>`);
                     return;
                 }
-
                 const total = state.cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-
                 let html = `
                     <h2 class="mb-4">${app.t('cart_title')}</h2>
                     <div class="row">
@@ -747,34 +734,21 @@
                     state.cart[idx].qty += change;
                 }
                 app.saveCart();
-                app.router('cart'); // Re-render
+                app.router('cart');
             },
 
             async processCheckout(total) {
                 const name = $('#co-name').val();
                 const phone = $('#co-phone').val();
                 const addr = $('#co-addr').val();
-
                 if (!name || !phone) {
-                    alert('Please fill details'); // Using alert as fallback, ideally custom toast
+                    alert('Please fill details');
                     return;
                 }
-
-                const orderDetails = {
-                    customer: name,
-                    phone: phone,
-                    address: addr,
-                    items: state.cart,
-                    total: total
-                };
-
+                const orderDetails = { customer: name, phone: phone, address: addr, items: state.cart, total: total };
                 await DataService.placeOrder(orderDetails);
-                
-                // Clear cart
                 state.cart = [];
                 app.saveCart();
-                
-                // Show success
                 const isAr = state.lang === 'ar';
                 $('#main-content').html(`
                     <div class="text-center py-5">
@@ -790,6 +764,9 @@
                 const isAr = state.lang === 'ar';
                 const today = new Date().toDateString();
                 const canCheckIn = state.lastLogin !== today;
+
+                // Check Spin Status
+                const canSpin = state.lastSpinDate !== today;
 
                 $container.html(`
                     <div class="loyalty-card">
@@ -824,12 +801,14 @@
                             <div class="game-box" onclick="game.openSpin()">
                                 <i class="fas fa-dharmachakra fa-3x text-primary mb-2"></i>
                                 <h6>${app.t('game_spin')}</h6>
+                                <small class="${canSpin ? 'text-success' : 'text-danger'}">${canSpin ? (isAr ? 'مجاني' : 'Free') : (isAr ? 'تم اللعب' : 'Played')}</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="game-box" onclick="$('#mysteryModal').modal('show')">
                                 <i class="fas fa-box-open fa-3x text-info mb-2"></i>
                                 <h6>${app.t('game_mystery')}</h6>
+                                <small class="text-warning fw-bold">Cost: 50 Pts</small>
                             </div>
                         </div>
                     </div>
@@ -846,7 +825,6 @@
                         <h4>Guest User</h4>
                         <p class="text-muted">+1 234 567 890</p>
                     </div>
-                    
                     <div class="list-group shadow-sm">
                         <button class="list-group-item list-group-item-action d-flex justify-content-between" onclick="app.router('cart')">
                             <span><i class="fas fa-shopping-bag me-2"></i> ${app.t('cart_title')}</span>
@@ -864,109 +842,126 @@
                 `);
             }
         };
-/* =======================================================
-           GAMIFICATION LOGIC (FIXED)
+
+        /* =======================================================
+           GAMIFICATION LOGIC (FINAL VERSION)
            ======================================================= */
-    const game = {
-        currentRotation: 0, // Track rotation to prevent spinning backwards
+        const game = {
+            currentRotation: 0,
 
-        dailyLogin() {
-            const today = new Date().toDateString();
-            
-            // Check if already logged in today
-            if (state.lastLogin === today) {
-                const msg = state.lang === 'ar' ? 'لقد استلمت جائزتك اليوم بالفعل!' : 'Already claimed today!';
-                alert(msg);
-                return;
-            }
-
-            // Perform Check-in
-            state.lastLogin = today;
-            state.userPoints += 10;
-            
-            // Save to LocalStorage
-            localStorage.setItem('lastLogin', state.lastLogin);
-            localStorage.setItem('userPoints', state.userPoints);
-            
-            const successMsg = state.lang === 'ar' ? 'تمت إضافة 10 نقاط!' : '+10 Points Added!';
-            alert(successMsg);
-            
-            app.router('loyalty'); // Refresh UI
-        },
-
-        openSpin() {
-            $('#spinModal').modal('show');
-            // FIX: Do NOT reset rotation to 0 here. 
-            // If we reset to 0 while transition is active, it spins backwards.
-            // We just leave it where it is.
-            $('#spin-btn').prop('disabled', false).text(state.lang === 'ar' ? 'دور الآن' : 'SPIN NOW');
-        },
-
-        spinWheel() {
-            const btn = $('#spin-btn');
-            btn.prop('disabled', true).text('Spinning...');
-
-            // FIX: Add to existing rotation so it always spins forward
-            const minSpins = 5;
-            const extraDegrees = Math.floor(Math.random() * 360);
-            const spinAmount = (minSpins * 360) + extraDegrees;
-            
-            this.currentRotation += spinAmount;
-
-            // Apply CSS Transform
-            $('#wheel').css('transform', `rotate(${this.currentRotation}deg)`);
-
-            // Wait for animation (4 seconds matches CSS)
-            setTimeout(() => {
-                const pointsWon = Math.floor(Math.random() * 20) + 5;
-                
-                // Update State
-                state.userPoints += pointsWon;
+            dailyLogin() {
+                const today = new Date().toDateString();
+                if (state.lastLogin === today) {
+                    const msg = state.lang === 'ar' ? 'لقد استلمت جائزتك اليوم بالفعل!' : 'Already claimed today!';
+                    alert(msg);
+                    return;
+                }
+                state.lastLogin = today;
+                state.userPoints += 10;
+                localStorage.setItem('lastLogin', state.lastLogin);
                 localStorage.setItem('userPoints', state.userPoints);
-                
-                // Show Result
-                const resultMsg = state.lang === 'ar' 
-                    ? `مبروك! فزت بـ ${pointsWon} نقطة` 
-                    : `Congratulations! You won ${pointsWon} points!`;
-                
-                alert(resultMsg);
-                
-                // Close Modal
-                $('#spinModal').modal('hide');
-                
-                // Refresh Loyalty Page to show new points
+                const successMsg = state.lang === 'ar' ? 'تمت إضافة 10 نقاط!' : '+10 Points Added!';
+                alert(successMsg);
                 app.router('loyalty');
-                
-                // Reset internal tracking for next load (optional, keeps numbers low)
-                this.currentRotation = this.currentRotation % 360; 
+            },
 
-            }, 4000);
-        },
+            openSpin() {
+                const today = new Date().toDateString();
+                const hasSpunToday = state.lastSpinDate === today;
 
-        openBox(id) {
-            // Simple random logic
-            const prizes = [
-                { name: '10 Points', pts: 10 },
-                { name: '5% Discount', pts: 0 },
-                { name: 'Free Drink', pts: 0 },
-                { name: 'Try Again', pts: 0 }
-            ];
-            
-            const prize = prizes[Math.floor(Math.random() * prizes.length)];
-            
-            // Show result in modal
-            $('#box-result').removeClass('hidden').text(`You found: ${prize.name}`);
-            
-            // If points, update state
-            if (prize.pts > 0) {
-                state.userPoints += prize.pts;
+                $('#spinModal').modal('show');
+                const btn = $('#spin-btn');
+                if (hasSpunToday) {
+                    btn.prop('disabled', true).text(state.lang === 'ar' ? 'عد غداً' : 'Come Back Tomorrow');
+                } else {
+                    btn.prop('disabled', false).text(state.lang === 'ar' ? 'دور الآن' : 'SPIN NOW');
+                }
+            },
+
+            spinWheel() {
+                const btn = $('#spin-btn');
+                btn.prop('disabled', true).text('Spinning...');
+
+                const minSpins = 5;
+                const extraDegrees = Math.floor(Math.random() * 360);
+                const spinAmount = (minSpins * 360) + extraDegrees;
+                this.currentRotation += spinAmount;
+
+                $('#wheel').css('transform', `rotate(${this.currentRotation}deg)`);
+
+                setTimeout(() => {
+                    const pointsWon = Math.floor(Math.random() * 20) + 5;
+                    state.userPoints += pointsWon;
+                    localStorage.setItem('userPoints', state.userPoints);
+                    
+                    // SAVE DATE TO LOCK GAME
+                    state.lastSpinDate = new Date().toDateString();
+                    localStorage.setItem('lastSpinDate', state.lastSpinDate);
+                    
+                    const resultMsg = state.lang === 'ar' 
+                        ? `مبروك! فزت بـ ${pointsWon} نقطة` 
+                        : `Congratulations! You won ${pointsWon} points!`;
+                    
+                    alert(resultMsg);
+                    $('#spinModal').modal('hide');
+                    app.router('loyalty');
+                    this.currentRotation = this.currentRotation % 360; 
+                }, 4000);
+            },
+
+            openBox(id) {
+                const COST_TO_PLAY = 50;
+                const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+                const now = new Date();
+                const lastPlay = state.lastBoxDate ? new Date(state.lastBoxDate) : null;
+
+                // --- WEEKLY LIMIT CHECK ---
+                if (lastPlay) {
+                    const timeDiff = now - lastPlay;
+                    if (timeDiff < ONE_WEEK_MS) {
+                        const daysLeft = Math.ceil((ONE_WEEK_MS - timeDiff) / (1000 * 60 * 60 * 24));
+                        const msg = state.lang === 'ar' 
+                            ? `عذراً، يمكنك اللعب مرة أخرى بعد ${daysLeft} أيام.` 
+                            : `Sorry, you can play again in ${daysLeft} days.`;
+                        alert(msg);
+                        return;
+                    }
+                }
+
+                // --- POINTS CHECK ---
+                if (state.userPoints < COST_TO_PLAY) {
+                    const msg = state.lang === 'ar' 
+                        ? `ليس لديك نقاط كافية! تحتاج ${COST_TO_PLAY} نقطة.` 
+                        : `Not enough points! You need ${COST_TO_PLAY} points.`;
+                    alert(msg);
+                    return; 
+                }
+
+                // --- GAMEPLAY ---
+                state.userPoints -= COST_TO_PLAY;
                 localStorage.setItem('userPoints', state.userPoints);
-            }
-        }
-    };
 
-        // Initialize Game Events
-        $('#spin-btn').on('click', () => game.spinWheel());
+                const prizes = [
+                    { name: '20 Points', pts: 20 },
+                    { name: '5% Discount', pts: 0 },
+                    { name: '100 Points', pts: 100 },
+                    { name: 'Try Again', pts: 0 }
+                ];
+                const prize = prizes[Math.floor(Math.random() * prizes.length)];
+                $('#box-result').removeClass('hidden').text(`You found: ${prize.name}`);
+                
+                if (prize.pts > 0) {
+                    state.userPoints += prize.pts;
+                    localStorage.setItem('userPoints', state.userPoints);
+                }
+
+                // --- SAVE DATE FOR NEXT WEEK ---
+                state.lastBoxDate = new Date().toISOString();
+                localStorage.setItem('lastBoxDate', state.lastBoxDate);
+
+                app.router('loyalty');
+            }
+        };
 
         /* =======================================================
            ADMIN DASHBOARD LOGIC
@@ -975,7 +970,6 @@
             showTab(tab) {
                 $('.list-group-item').removeClass('active');
                 $(`button[onclick="admin.showTab('${tab}')"]`).addClass('active');
-                
                 if (tab === 'overview') this.renderOverview();
                 if (tab === 'orders') this.renderOrders();
                 if (tab === 'menu') this.renderMenuManager();
@@ -985,7 +979,6 @@
             renderOverview() {
                 const totalOrders = state.orders.length;
                 const revenue = state.orders.reduce((sum, o) => sum + o.total, 0);
-                
                 $('#admin-content').html(`
                     <h3>Dashboard Overview</h3>
                     <div class="row g-3 mt-1">
@@ -1084,7 +1077,6 @@
         $(document).ready(() => {
             app.init();
         });
-
     </script>
 </body>
 </html>
