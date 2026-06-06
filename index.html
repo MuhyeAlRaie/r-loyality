@@ -557,6 +557,15 @@
                     state.orders.push(newOrder);
                     localStorage.setItem('mock_orders', JSON.stringify(state.orders));
                 }
+
+
+            // --- REWARD LOGIC (1 Point per $1 spent) ---
+            if (state.currentUser) {
+                const pointsEarned = Math.floor(newOrder.total); 
+                state.userPoints += pointsEarned;
+                AuthService.updateCurrentUser();
+                console.log(`User earned ${pointsEarned} points from order.`);
+            }
                 return newOrder;
             }
         };
@@ -810,27 +819,39 @@
                 app.router('cart');
             },
 
-            async processCheckout(total) {
-                const name = $('#co-name').val();
-                const phone = $('#co-phone').val();
-                const addr = $('#co-addr').val();
-                if (!name || !phone) {
-                    alert('Please fill details');
-                    return;
-                }
-                const orderDetails = { customer: name, phone: phone, address: addr, items: state.cart, total: total };
-                await DataService.placeOrder(orderDetails);
-                state.cart = [];
-                app.saveCart();
-                const isAr = state.lang === 'ar';
-                $('#main-content').html(`
-                    <div class="text-center py-5">
-                        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-                        <h3>${isAr ? 'تم الطلب بنجاح!' : 'Order Placed Successfully!'}</h3>
-                        <button class="btn btn-primary mt-3" onclick="app.router('home')">${isAr ? 'الرئيسية' : 'Back Home'}</button>
-                    </div>
-                `);
-            },
+        async processCheckout(total) {
+            const name = $('#co-name').val();
+            const phone = $('#co-phone').val();
+            const addr = $('#co-addr').val();
+            
+            if (!name || !phone) {
+                alert('Please fill details');
+                return;
+            }
+
+            const orderDetails = { customer: name, phone: phone, address: addr, items: state.cart, total: total };
+            
+            await DataService.placeOrder(orderDetails);
+            
+            state.cart = [];
+            app.saveCart();
+            
+            const isAr = state.lang === 'ar';
+            const pointsEarned = state.currentUser ? Math.floor(total) : 0;
+            
+            // Show success message with points
+            const successMsg = isAr 
+                ? `تم الطلب بنجاح! (كسبت ${pointsEarned} نقطة)` 
+                : `Order Placed Successfully! (You earned ${pointsEarned} points)`;
+
+            $('#main-content').html(`
+                <div class="text-center py-5">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <h3>${successMsg}</h3>
+                    <button class="btn btn-primary mt-3" onclick="app.router('home')">${isAr ? 'الرئيسية' : 'Back Home'}</button>
+                </div>
+            `);
+        },
 
             renderLoyalty($container) {
                 const isAr = state.lang === 'ar';
