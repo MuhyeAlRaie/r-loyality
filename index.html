@@ -218,6 +218,86 @@
         .hidden { display: none !important; }
         .text-brand { color: var(--primary-color); }
         .bg-brand { background-color: var(--primary-color); }
+
+          /* =========================================
+       CATCH BURGER GAME STYLES
+       ========================================= */
+
+    /* Mobile Fullscreen Mode */
+    @media (max-width: 768px) {
+        #catchModal .modal-dialog {
+            margin: 0;
+            height: 100vh;
+            max-width: 100%;
+        }
+        #catchModal .modal-content {
+            height: 100vh;
+            border-radius: 0;
+            border: none;
+        }
+    }
+
+    #catchModal .modal-body {
+        position: relative;
+        padding: 0;
+        background-color: #2d3436; /* Dark background around game */
+        height: 100%; /* Fill modal height */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* The Canvas */
+    #gameCanvas {
+        background-color: #87CEEB; /* Sky Blue Background */
+        border-bottom: 15px solid #654321; /* The Ground */
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        max-width: 100%;
+        max-height: 80vh; /* Don't overflow screen */
+        touch-action: none; /* PREVENTS SCREEN SCROLLING WHILE PLAYING */
+        cursor: pointer;
+    }
+
+    /* Heads Up Display (Score & Timer) */
+    #game-ui {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 15px 25px;
+        background: rgba(0, 0, 0, 0.75); /* Semi-transparent black */
+        color: white;
+        z-index: 10;
+        border-bottom: 4px solid var(--primary-color);
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        font-size: 1.2rem;
+        display: flex;
+        justify-content: space-between;
+        pointer-events: none; /* Let clicks pass through to canvas */
+        backdrop-filter: blur(4px);
+    }
+
+    /* Start/Menu Overlay */
+    #game-start-screen {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 40px;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        z-index: 20;
+        min-width: 280px;
+        border: 2px solid var(--primary-color);
+    }
+
+    #game-start-screen h4 {
+        margin-bottom: 15px;
+        color: var(--secondary-color);
+    }
     </style>
 </head>
 <body>
@@ -339,6 +419,35 @@
             </div>
         </div>
     </div>
+
+    <!-- Catch Burger Modal -->
+<div class="modal fade" id="catchModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Catch the Burger!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-0 bg-light">
+                <!-- Game UI Overlay -->
+                <div id="game-ui" class="p-3 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Time: <span id="game-timer" class="text-danger">30</span>s</span>
+                    <span class="fw-bold">Score: <span id="game-score" class="text-primary">0</span></span>
+                </div>
+                
+                <!-- The Canvas -->
+                <canvas id="gameCanvas" width="300" height="600" style="width:100%; height:auto; background:#fff; display:block; border-top:1px solid #ddd;"></canvas>
+                
+                <!-- Start Screen Overlay -->
+                <div id="game-start-screen" class="position-absolute top-50 start-50 translate-middle bg-white p-4 rounded shadow border">
+                    <h4>Cost: 10 Points</h4>
+                    <p class="small text-muted">Catch burgers (+10 pts), Avoid Bombs (-20 pts)</p>
+                    <button class="btn btn-primary" onclick="catchGame.start()">Play Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -581,6 +690,7 @@
                 this.applyLanguage();
                 this.router('home');
                 this.updateCartCount();
+                 catchGame.init();
                 
                 $('#lang-toggle').on('click', () => this.toggleLanguage());
             },
@@ -913,6 +1023,13 @@
                                 <small class="text-warning fw-bold">Cost: 50 Pts</small>
                             </div>
                         </div>
+                        <div class="col-6">
+            <div class="game-box" onclick="$('#catchModal').modal('show')">
+                <i class="fas fa-hamburger fa-3x text-warning mb-2"></i>
+                <h6>Catch Burger</h6>
+                <small class="text-danger fw-bold">Cost: 10 Pts</small>
+            </div>
+        </div>
                     </div>
                 `);
             },
@@ -1116,6 +1233,213 @@
                 app.router('loyalty');
             }
         };
+
+        /* =======================================================
+           GAME: CATCH BURGER (FIXED)
+           ======================================================= */
+    const catchGame = {
+        canvas: null,
+        ctx: null,
+        isPlaying: false,
+        score: 0,
+        timeLeft: 30,
+        items: [], 
+        playerX: 0,
+        playerWidth: 60,
+        playerHeight: 20,
+        gameLoopId: null,
+        spawnRate: 60,
+
+        init() {
+            // Only get the element here, don't resize yet
+            this.canvas = document.getElementById('gameCanvas');
+            if(!this.canvas) return; // Safety check
+            this.ctx = this.canvas.getContext('2d');
+            
+            // Add Controls (Mouse/Touch)
+            const updatePos = (clientX) => {
+                const rect = this.canvas.getBoundingClientRect();
+                let x = clientX - rect.left - (this.playerWidth / 2);
+                if (x < 0) x = 0;
+                if (x > this.canvas.width - this.playerWidth) x = this.canvas.width - this.playerWidth;
+                this.playerX = x;
+            };
+
+            this.canvas.addEventListener('mousemove', (e) => updatePos(e.clientX));
+            this.canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault(); 
+                updatePos(e.touches[0].clientX);
+            }, { passive: false });
+        },
+
+        start() {
+            // 1. AUTH CHECK
+            if (!state.currentUser) {
+                alert("Please login first");
+                $('#catchModal').modal('hide');
+                app.router('login');
+                return;
+            }
+
+            const COST = 10;
+            if (state.userPoints < COST) {
+                alert(`Not enough points! Need ${COST}`);
+                return;
+            }
+
+            // 2. RESIZE CANVAS FOR PORTRAIT MODE
+            // Width fills the container
+            this.canvas.width = this.canvas.offsetWidth;
+            // Height is 70% of the screen height (Portrait aspect)
+            this.canvas.height = Math.min(window.innerHeight * 0.7, 700); 
+
+            // 3. DEDUCT COST & RESET STATE
+            state.userPoints -= COST;
+            AuthService.updateCurrentUser();
+
+            this.score = 0;
+            this.timeLeft = 30;
+            this.items = [];
+            this.isPlaying = true;
+            this.spawnRate = 60;
+            
+            // 4. UI UPDATES
+            $('#game-start-screen').addClass('hidden');
+            $('#game-score').text(0);
+            $('#game-timer').text(30);
+            
+            // 5. START LOOPS
+            this.gameLoop();
+            this.timerLoop = setInterval(() => {
+                this.timeLeft--;
+                $('#game-timer').text(this.timeLeft);
+                if (this.timeLeft <= 0) this.end();
+            }, 1000);
+        },
+
+        spawnItem() {
+            // Spawn slightly offscreen
+            const type = Math.random() > 0.8 ? 'bomb' : 'burger'; 
+            const size = 30;
+            this.items.push({
+                x: Math.random() * (this.canvas.width - size),
+                y: -size,
+                speed: Math.random() * 3 + 2, 
+                type: type,
+                size: size
+            });
+        },
+
+        drawBurger(x, y, size) {
+            // Bun Bottom
+            this.ctx.fillStyle = '#d2a679';
+            this.ctx.beginPath();
+            this.ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI, true);
+            this.ctx.fill();
+            // Patty
+            this.ctx.fillStyle = '#8b4513';
+            this.ctx.fillRect(x, y + size/3, size, size/3);
+            // Top Bun
+            this.ctx.fillStyle = '#e6c288';
+            this.ctx.beginPath();
+            this.ctx.arc(x + size/2, y + size/3, size/2, 0, Math.PI, true);
+            this.ctx.fill();
+        },
+
+        drawBomb(x, y, size) {
+            this.ctx.fillStyle = 'black';
+            this.ctx.beginPath();
+            this.ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
+            this.ctx.fill();
+            // Fuse
+            this.ctx.strokeStyle = 'orange';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + size/2, y);
+            this.ctx.lineTo(x + size, y - 10);
+            this.ctx.stroke();
+        },
+
+        gameLoop() {
+            if (!this.isPlaying) return;
+
+            // Clear Canvas
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Spawn Logic
+            this.spawnRate--;
+            if (this.spawnRate <= 0) {
+                this.spawnItem();
+                this.spawnRate = 40; 
+            }
+
+            // Update & Draw Items
+            for (let i = 0; i < this.items.length; i++) {
+                let item = this.items[i];
+                item.y += item.speed;
+
+                // Draw
+                if (item.type === 'burger') this.drawBurger(item.x, item.y, item.size);
+                else this.drawBomb(item.x, item.y, item.size);
+
+                // Collision Detection (Simple AABB)
+                if (
+                    item.y + item.size >= this.canvas.height - this.playerHeight &&
+                    item.x < this.playerX + this.playerWidth &&
+                    item.x + item.size > this.playerX
+                ) {
+                    // Hit!
+                    if (item.type === 'burger') {
+                        this.score += 10;
+                        this.flashScore('text-success');
+                    } else {
+                        this.score -= 20;
+                        this.flashScore('text-danger');
+                    }
+                    $('#game-score').text(this.score);
+                    this.items.splice(i, 1);
+                    i--;
+                    continue;
+                }
+
+                // Remove if out of bounds
+                if (item.y > this.canvas.height) {
+                    this.items.splice(i, 1);
+                    i--;
+                }
+            }
+
+            // Draw Player
+            this.ctx.fillStyle = '#ff6b6b';
+            this.ctx.fillRect(this.playerX, this.canvas.height - this.playerHeight, this.playerWidth, this.playerHeight);
+
+            requestAnimationFrame(() => this.gameLoop());
+        },
+
+        flashScore(colorClass) {
+            const el = $('#game-score');
+            el.removeClass('text-primary text-success text-danger').addClass(colorClass);
+            setTimeout(() => el.removeClass(colorClass).addClass('text-primary'), 200);
+        },
+
+        end() {
+            this.isPlaying = false;
+            clearInterval(this.timerLoop);
+            
+            // Add Score to User Points
+            state.userPoints += this.score;
+            AuthService.updateCurrentUser();
+
+            // Show Result
+            const msg = this.score > 0 
+                ? `Game Over! You won ${this.score} points!` 
+                : `Game Over! You lost ${Math.abs(this.score)} points.`;
+            
+            alert(msg);
+            $('#catchModal').modal('hide');
+            app.router('loyalty');
+        }
+    };
 
         /* =======================================================
            ADMIN DASHBOARD LOGIC
