@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Platform</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        /* =========================================
+           CSS VARIABLES & THEME CONFIGURATION
+           ========================================= */
+        :root {
+            --primary-color: #ff6b6b;
+            --secondary-color: #2d3436;
+            --accent-color: #ffeaa7;
+            --font-ltr: 'Poppins', sans-serif;
+            --font-rtl: 'Cairo', sans-serif;
+            --bg-light: #f8f9fa;
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        body {
+            font-family: var(--font-ltr);
+            background-color: var(--bg-light);
+            overflow-x: hidden;
+            padding-bottom: 80px; /* Space for mobile nav */
+        }
+
+        /* RTL Support */
+        html[dir="rtl"] body {
+            font-family: var(--font-rtl);
+        }
+
+        /* =========================================
+           COMPONENT STYLES
+           ========================================= */
+        .navbar {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+            font-size: 1.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+        }
+
+        .btn-primary:hover {
+            background-color: #e05e5e;
+            color: white;
+        }
+
+        .product-card {
+            border: none;
+            border-radius: 15px;
+            background: white;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .product-img {
+            height: 180px;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .category-pill {
+            cursor: pointer;
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+            background: white;
+            border: 1px solid #eee;
+            margin: 0 5px 10px;
+            transition: all 0.3s;
+        }
+
+        .category-pill.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Loyalty & Gamification */
+        .loyalty-card {
+            background: linear-gradient(135deg, var(--primary-color), #ff9f43);
+            color: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .game-box {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .game-box:hover {
+            transform: scale(1.02);
+            border-color: var(--primary-color);
+        }
+
+        /* Spin Wheel */
+        .wheel-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto;
+        }
+        
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 5px solid white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+            background: conic-gradient(
+                #ff6b6b 0deg 60deg,
+                #ffeaa7 60deg 120deg,
+                #55efc4 120deg 180deg,
+                #a29bfe 180deg 240deg,
+                #fd79a8 240deg 300deg,
+                #74b9ff 300deg 360deg
+            );
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #2d3436;
+            z-index: 10;
+        }
+
+        /* Admin Dashboard */
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            border-left: 5px solid var(--primary-color);
+        }
+        
+        html[dir="rtl"] .stat-card {
+            border-left: none;
+            border-right: 5px solid var(--primary-color);
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* Mobile Nav */
+        .mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .mobile-nav-item {
+            text-align: center;
+            color: #aaa;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .mobile-nav-item.active {
+            color: var(--primary-color);
+        }
+
+        .mobile-nav-item i {
+            font-size: 1.2rem;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        /* Helpers */
+        .hidden { display: none !important; }
+        .text-brand { color: var(--primary-color); }
+        .bg-brand { background-color: var(--primary-color); }
+    </style>
+</head>
+<body>
+
+    <!-- NAVIGATION -->
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="#" id="nav-brand">Brand</a>
+            
+            <div class="d-flex align-items-center ms-auto gap-3">
+                <!-- Language Switcher -->
+                <button class="btn btn-sm btn-outline-secondary" id="lang-toggle">
+                    <i class="fas fa-globe"></i> <span id="lang-text">AR</span>
+                </button>
+                
+                <!-- Cart Icon -->
+                <a href="#" class="position-relative text-secondary" onclick="app.router('cart')">
+                    <i class="fas fa-shopping-bag fa-lg"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-count">0</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="container py-4" id="main-content">
+        <!-- Views will be injected here -->
+    </main>
+
+    <!-- ADMIN DASHBOARD (Separate View) -->
+    <div id="admin-panel" class="hidden">
+        <nav class="navbar navbar-dark bg-dark">
+            <div class="container">
+                <span class="navbar-brand mb-0 h1"><i class="fas fa-user-shield me-2"></i>Admin Dashboard</span>
+                <button class="btn btn-outline-light btn-sm" onclick="app.router('home')">Exit Admin</button>
+            </div>
+        </nav>
+        <div class="container-fluid py-4">
+            <div class="row">
+                <!-- Sidebar -->
+                <div class="col-md-2 mb-3">
+                    <div class="list-group">
+                        <button class="list-group-item list-group-item-action active" onclick="admin.showTab('overview')">Overview</button>
+                        <button class="list-group-item list-group-item-action" onclick="admin.showTab('orders')">Orders</button>
+                        <button class="list-group-item list-group-item-action" onclick="admin.showTab('menu')">Menu</button>
+                        <button class="list-group-item list-group-item-action" onclick="admin.showTab('loyalty')">Loyalty</button>
+                        <button class="list-group-item list-group-item-action" onclick="admin.showTab('settings')">Settings</button>
+                    </div>
+                </div>
+                <!-- Admin Content -->
+                <div class="col-md-10" id="admin-content">
+                    <!-- Admin views injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOBILE BOTTOM NAV -->
+    <div class="mobile-nav d-md-none">
+        <div class="mobile-nav-item active" onclick="app.router('home')">
+            <i class="fas fa-home"></i> <span data-i18n="nav_home">Home</span>
+        </div>
+        <div class="mobile-nav-item" onclick="app.router('menu')">
+            <i class="fas fa-utensils"></i> <span data-i18n="nav_menu">Menu</span>
+        </div>
+        <div class="mobile-nav-item" onclick="app.router('loyalty')">
+            <i class="fas fa-gift"></i> <span data-i18n="nav_rewards">Rewards</span>
+        </div>
+        <div class="mobile-nav-item" onclick="app.router('profile')">
+            <i class="fas fa-user"></i> <span data-i18n="nav_profile">Profile</span>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    
+    <!-- Product Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body p-0">
+                    <img src="" id="modal-img" class="w-100" style="height: 200px; object-fit: cover;">
+                    <div class="p-3">
+                        <h4 id="modal-title"></h4>
+                        <p id="modal-desc" class="text-muted small"></p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <h5 class="text-brand mb-0" id="modal-price"></h5>
+                            <button class="btn btn-primary btn-sm" id="modal-add-btn">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spin Wheel Modal -->
+    <div class="modal fade" id="spinModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-center py-4">
+                <h3 data-i18n="game_spin_title">Daily Spin</h3>
+                <div class="wheel-container my-4">
+                    <div class="wheel-pointer"></div>
+                    <div class="wheel" id="wheel"></div>
+                </div>
+                <button class="btn btn-primary" id="spin-btn">SPIN NOW</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mystery Box Modal -->
+    <div class="modal fade" id="mysteryModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-center py-4">
+                <h3 data-i18n="game_mystery_title">Mystery Box</h3>
+                <p data-i18n="game_mystery_desc">Pick a box to reveal your prize!</p>
+                <div class="d-flex justify-content-center gap-3 my-4">
+                    <div class="game-box p-4" onclick="game.openBox(1)">🎁</div>
+                    <div class="game-box p-4" onclick="game.openBox(2)">🎁</div>
+                    <div class="game-box p-4" onclick="game.openBox(3)">🎁</div>
+                </div>
+                <div id="box-result" class="hidden mt-3 alert alert-success"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =======================================================
+           CONFIGURATION & STATE
+           ======================================================= */
+        
+        // --- White Label Configuration ---
+        const APP_CONFIG = {
+            restaurantName: "Burger House",
+            logoUrl: "https://cdn-icons-png.flaticon.com/512/3075/3075977.png", // Placeholder
+            primaryColor: "#ff6b6b",
+            currency: "USD",
+            orderingEnabled: true,
+            engagementEnabled: true
+        };
+
+        // --- Supabase Configuration (Placeholder for User) ---
+        const SUPABASE_CONFIG = {
+            url: "", // "https://xyz.supabase.co"
+            key: ""  // "eyJhbGci..."
+        };
+
+        // --- Translations ---
+        const TRANSLATIONS = {
+            en: {
+                nav_home: "Home", nav_menu: "Menu", nav_rewards: "Rewards", nav_profile: "Profile",
+                welcome: "Welcome", order_now: "Order Now", view_menu: "View Menu",
+                cart_title: "My Cart", checkout: "Checkout", total: "Total",
+                loyalty_title: "Loyalty Hub", points_balance: "Points Balance",
+                daily_login: "Daily Check-in", login_btn: "Check In",
+                game_spin: "Spin Wheel", game_mystery: "Mystery Box",
+                admin_dash: "Admin Dashboard", stats_orders: "Total Orders", stats_rev: "Revenue",
+                checkout_name: "Full Name", checkout_phone: "Phone", checkout_addr: "Address",
+                place_order: "Place Order"
+            },
+            ar: {
+                nav_home: "الرئيسية", nav_menu: "القائمة", nav_rewards: "المكافآت", nav_profile: "حسابي",
+                welcome: "مرحباً", order_now: "اطلب الآن", view_menu: "تصفح القائمة",
+                cart_title: "سلة المشتريات", checkout: "إتمام الطلب", total: "المجموع",
+                loyalty_title: "مركز الولاء", points_balance: "رصيد النقاط",
+                daily_login: "الدخول اليومي", login_btn: "تسجيل دخول",
+                game_spin: "عجلة الحظ", game_mystery: "الصندوق المفاجئ",
+                admin_dash: "لوحة التحكم", stats_orders: "إجمالي الطلبات", stats_rev: "الإيرادات",
+                checkout_name: "الاسم الكامل", checkout_phone: "رقم الهاتف", checkout_addr: "العنوان",
+                place_order: "تأكيد الطلب"
+            }
+        };
+
+        // --- State Management ---
+        const state = {
+            lang: localStorage.getItem('lang') || 'en',
+            cart: JSON.parse(localStorage.getItem('cart')) || [],
+            userPoints: parseInt(localStorage.getItem('userPoints')) || 0,
+            lastLogin: localStorage.getItem('lastLogin'),
+            products: [], // Populated from DB or Mock
+            orders: [],   // Populated from DB or Mock
+            currentView: 'home'
+        };
+
+        // --- Data Service (Supabase or LocalStorage Fallback) ---
+        const DataService = {
+            supabase: null,
+            
+            init() {
+                if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.key) {
+                    this.supabase = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+                    console.log("Supabase Connected");
+                } else {
+                    console.log("Demo Mode: Using LocalStorage");
+                    this.seedMockData();
+                }
+            },
+
+            // Mock Data Seeding for Demo
+            seedMockData() {
+                if (!localStorage.getItem('mock_products')) {
+                    const mock = [
+                        { id: 1, name: "Classic Burger", name_ar: "برجر كلاسيك", price: 12, category: "Burgers", img: "https://picsum.photos/seed/burger1/300/200" },
+                        { id: 2, name: "Cheese Fries", name_ar: "بطاطس جبن", price: 5, category: "Sides", img: "https://picsum.photos/seed/fries/300/200" },
+                        { id: 3, name: "Cola Drink", name_ar: "كولا", price: 2, category: "Drinks", img: "https://picsum.photos/seed/coke/300/200" },
+                        { id: 4, name: "Chicken Pizza", name_ar: "بيتزا دجاج", price: 15, category: "Pizza", img: "https://picsum.photos/seed/pizza/300/200" },
+                    ];
+                    localStorage.setItem('mock_products', JSON.stringify(mock));
+                }
+                state.products = JSON.parse(localStorage.getItem('mock_products'));
+                
+                if (!localStorage.getItem('mock_orders')) {
+                    localStorage.setItem('mock_orders', JSON.stringify([
+                        { id: 101, customer: "John Doe", total: 17, status: "Delivered", date: "2023-10-01" },
+                        { id: 102, customer: "Ahmed Ali", total: 12, status: "Preparing", date: "2023-10-02" }
+                    ]));
+                }
+                state.orders = JSON.parse(localStorage.getItem('mock_orders'));
+            },
+
+            // Generic Fetch Wrapper
+            async fetchProducts() {
+                if (this.supabase) {
+                    const { data, error } = await this.supabase.from('products').select('*');
+                    if (!error) state.products = data;
+                } else {
+                    // Already seeded in init
+                }
+                return state.products;
+            },
+
+            async placeOrder(orderDetails) {
+                const newOrder = {
+                    id: Date.now(),
+                    ...orderDetails,
+                    status: "New",
+                    date: new Date().toISOString().split('T')[0]
+                };
+                
+                if (this.supabase) {
+                    await this.supabase.from('orders').insert([newOrder]);
+                } else {
+                    state.orders.push(newOrder);
+                    localStorage.setItem('mock_orders', JSON.stringify(state.orders));
+                }
+                return newOrder;
+            }
+        };
+
+        /* =======================================================
+           APP LOGIC
+           ======================================================= */
+
+        const app = {
+            init() {
+                DataService.init();
+                this.applyTheme();
+                this.applyLanguage();
+                this.router('home');
+                this.updateCartCount();
+                
+                // Event Listeners
+                $('#lang-toggle').on('click', () => this.toggleLanguage());
+            },
+
+            applyTheme() {
+                document.documentElement.style.setProperty('--primary-color', APP_CONFIG.primaryColor);
+                $('#nav-brand').text(APP_CONFIG.restaurantName);
+            },
+
+            applyLanguage() {
+                const dict = TRANSLATIONS[state.lang];
+                const dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+                
+                $('html').attr('dir', dir);
+                $('#lang-text').text(state.lang === 'en' ? 'AR' : 'EN');
+
+                $('[data-i18n]').each(function() {
+                    const key = $(this).data('i18n');
+                    $(this).text(dict[key]);
+                });
+            },
+
+            toggleLanguage() {
+                state.lang = state.lang === 'en' ? 'ar' : 'en';
+                localStorage.setItem('lang', state.lang);
+                this.applyLanguage();
+                // Re-render current view to apply dynamic content changes (e.g., product names)
+                this.router(state.currentView); 
+            },
+
+            t(key) {
+                return TRANSLATIONS[state.lang][key];
+            },
+
+            router(view) {
+                state.currentView = view;
+                const $main = $('#main-content');
+                const $admin = $('#admin-panel');
+                const $mobileNav = $('.mobile-nav');
+
+                // Reset
+                $main.removeClass('hidden');
+                $admin.addClass('hidden');
+                $mobileNav.show();
+                $('.mobile-nav-item').removeClass('active');
+
+                if (view === 'admin') {
+                    $main.addClass('hidden');
+                    $mobileNav.hide();
+                    $admin.removeClass('hidden');
+                    admin.renderOverview();
+                    return;
+                }
+
+                // Render Views
+                if (view === 'home') views.renderHome($main);
+                else if (view === 'menu') views.renderMenu($main);
+                else if (view === 'cart') views.renderCart($main);
+                else if (view === 'loyalty') views.renderLoyalty($main);
+                else if (view === 'profile') views.renderProfile($main);
+
+                // Update Active Nav State
+                if (['home', 'menu', 'loyalty', 'profile'].includes(view)) {
+                   $(`.mobile-nav-item[onclick="app.router('${view}')"]`).addClass('active');
+                }
+                
+                // Scroll top
+                window.scrollTo(0,0);
+            },
+
+            addToCart(productId) {
+                const product = state.products.find(p => p.id === productId);
+                const existing = state.cart.find(item => item.id === productId);
+                
+                if (existing) existing.qty++;
+                else state.cart.push({ ...product, qty: 1 });
+                
+                this.saveCart();
+                
+                // Visual feedback
+                const btn = $(`#add-btn-${productId}`);
+                const originalText = btn.html();
+                btn.html('<i class="fas fa-check"></i>');
+                setTimeout(() => btn.html(originalText), 1000);
+            },
+
+            saveCart() {
+                localStorage.setItem('cart', JSON.stringify(state.cart));
+                this.updateCartCount();
+            },
+
+            updateCartCount() {
+                const count = state.cart.reduce((acc, item) => acc + item.qty, 0);
+                $('#cart-count').text(count);
+            },
+
+            formatPrice(price) {
+                return `${price} ${APP_CONFIG.currency}`;
+            }
+        };
+
+        /* =======================================================
+           VIEWS RENDERING
+           ======================================================= */
+        const views = {
+            renderHome($container) {
+                const isAr = state.lang === 'ar';
+                const featured = state.products.slice(0, 3);
+                
+                let html = `
+                    <div class="text-center py-5">
+                        <h1 class="display-4 fw-bold text-brand mb-3">${APP_CONFIG.restaurantName}</h1>
+                        <p class="lead text-muted mb-4">${isAr ? 'أفضل مذاق في المدينة' : 'Best taste in the city'}</p>
+                        <button class="btn btn-primary btn-lg" onclick="app.router('menu')">${app.t('order_now')}</button>
+                    </div>
+
+                    <h3 class="mb-3 fw-bold">${isAr ? 'الأكثر مبيعاً' : 'Best Sellers'}</h3>
+                    <div class="row g-3">
+                        ${featured.map(p => this.productCard(p)).join('')}
+                    </div>
+                    
+                    <div class="my-5 p-4 rounded-3 text-white text-center" style="background: var(--secondary-color);">
+                        <h3>${isAr ? 'انضم إلى برنامج الولاء' : 'Join Loyalty Program'}</h3>
+                        <p>${isAr ? 'اكسب نقاط مع كل طلب والعب للفوز بجوائز' : 'Earn points with every order and play to win rewards'}</p>
+                        <button class="btn btn-light" onclick="app.router('loyalty')">${isAr ? 'تصفح المكافآت' : 'View Rewards'}</button>
+                    </div>
+                `;
+                $container.html(html);
+            },
+
+            renderMenu($container) {
+                const isAr = state.lang === 'ar';
+                // Unique categories
+                const categories = [...new Set(state.products.map(p => p.category))];
+                
+                let html = `
+                    <div class="d-flex overflow-auto pb-3 mb-3" id="category-filter">
+                        <span class="category-pill active" onclick="views.filterMenu('All', this)">${isAr ? 'الكل' : 'All'}</span>
+                        ${categories.map(c => `<span class="category-pill" onclick="views.filterMenu('${c}', this)">${c}</span>`).join('')}
+                    </div>
+                    <div class="row g-3" id="menu-grid">
+                        ${state.products.map(p => this.productCard(p)).join('')}
+                    </div>
+                `;
+                $container.html(html);
+            },
+
+            filterMenu(cat, el) {
+                $('.category-pill').removeClass('active');
+                $(el).addClass('active');
+                
+                const filtered = cat === 'All' ? state.products : state.products.filter(p => p.category === cat);
+                $('#menu-grid').html(filtered.map(p => this.productCard(p)).join(''));
+            },
+
+            productCard(p) {
+                const name = state.lang === 'ar' && p.name_ar ? p.name_ar : p.name;
+                return `
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="product-card h-100">
+                            <img src="${p.img}" class="product-img" onclick="views.showProductModal(${p.id})">
+                            <div class="p-2">
+                                <h6 class="fw-bold text-truncate">${name}</h6>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <span class="text-brand fw-bold">${app.formatPrice(p.price)}</span>
+                                    <button class="btn btn-sm btn-outline-primary rounded-circle" id="add-btn-${p.id}" onclick="app.addToCart(${p.id})">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            showProductModal(id) {
+                const p = state.products.find(x => x.id === id);
+                const name = state.lang === 'ar' && p.name_ar ? p.name_ar : p.name;
+                
+                $('#modal-img').attr('src', p.img);
+                $('#modal-title').text(name);
+                $('#modal-desc').text(p.category);
+                $('#modal-price').text(app.formatPrice(p.price));
+                
+                // Unbind old click to prevent duplicates
+                $('#modal-add-btn').off('click').on('click', () => {
+                    app.addToCart(id);
+                    $('#productModal').modal('hide');
+                });
+                
+                $('#productModal').modal('show');
+            },
+
+            renderCart($container) {
+                const isAr = state.lang === 'ar';
+                if (state.cart.length === 0) {
+                    $container.html(`<div class="text-center py-5"><i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i><p>${isAr ? 'السلة فارغة' : 'Cart is empty'}</p></div>`);
+                    return;
+                }
+
+                const total = state.cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+                let html = `
+                    <h2 class="mb-4">${app.t('cart_title')}</h2>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="list-group">
+                                ${state.cart.map((item, idx) => `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">${state.lang === 'ar' && item.name_ar ? item.name_ar : item.name}</h6>
+                                            <small class="text-muted">${app.formatPrice(item.price)}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <button class="btn btn-sm btn-light border" onclick="views.updateQty(${idx}, -1)">-</button>
+                                            <span class="mx-2">${item.qty}</span>
+                                            <button class="btn btn-sm btn-light border" onclick="views.updateQty(${idx}, 1)">+</button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="col-md-4 mt-3 mt-md-0">
+                            <div class="card p-3 shadow-sm">
+                                <h4 class="d-flex justify-content-between">
+                                    <span>${app.t('total')}</span>
+                                    <span class="text-brand">${app.formatPrice(total)}</span>
+                                </h4>
+                                <hr>
+                                <div class="mb-3">
+                                    <label class="form-label">${app.t('checkout_name')}</label>
+                                    <input type="text" class="form-control" id="co-name">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">${app.t('checkout_phone')}</label>
+                                    <input type="tel" class="form-control" id="co-phone">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">${app.t('checkout_addr')}</label>
+                                    <textarea class="form-control" id="co-addr" rows="2"></textarea>
+                                </div>
+                                <button class="btn btn-primary w-100" onclick="views.processCheckout(${total})">${app.t('place_order')}</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $container.html(html);
+            },
+
+            updateQty(idx, change) {
+                if (state.cart[idx].qty + change <= 0) {
+                    state.cart.splice(idx, 1);
+                } else {
+                    state.cart[idx].qty += change;
+                }
+                app.saveCart();
+                app.router('cart'); // Re-render
+            },
+
+            async processCheckout(total) {
+                const name = $('#co-name').val();
+                const phone = $('#co-phone').val();
+                const addr = $('#co-addr').val();
+
+                if (!name || !phone) {
+                    alert('Please fill details'); // Using alert as fallback, ideally custom toast
+                    return;
+                }
+
+                const orderDetails = {
+                    customer: name,
+                    phone: phone,
+                    address: addr,
+                    items: state.cart,
+                    total: total
+                };
+
+                await DataService.placeOrder(orderDetails);
+                
+                // Clear cart
+                state.cart = [];
+                app.saveCart();
+                
+                // Show success
+                const isAr = state.lang === 'ar';
+                $('#main-content').html(`
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                        <h3>${isAr ? 'تم الطلب بنجاح!' : 'Order Placed Successfully!'}</h3>
+                        <p>${isAr ? 'رقم الطلب:' : 'Order ID:'} ${Date.now()}</p>
+                        <button class="btn btn-primary mt-3" onclick="app.router('home')">${isAr ? 'الرئيسية' : 'Back Home'}</button>
+                    </div>
+                `);
+            },
+
+            renderLoyalty($container) {
+                const isAr = state.lang === 'ar';
+                const today = new Date().toDateString();
+                const canCheckIn = state.lastLogin !== today;
+
+                $container.html(`
+                    <div class="loyalty-card">
+                        <h4>${app.t('loyalty_title')}</h4>
+                        <h1 class="display-3 fw-bold">${state.userPoints} <small style="font-size:1rem">pts</small></h1>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div class="card p-3 text-center h-100 shadow-sm">
+                                <i class="fas fa-calendar-check fa-2x text-warning mb-2"></i>
+                                <h6>${app.t('daily_login')}</h6>
+                                <p class="small text-muted">+10 pts</p>
+                                <button class="btn btn-sm ${canCheckIn ? 'btn-success' : 'btn-secondary'}" onclick="game.dailyLogin()" ${!canCheckIn ? 'disabled' : ''}>
+                                    ${canCheckIn ? app.t('login_btn') : (isAr ? 'تم الاستلام' : 'Claimed')}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card p-3 text-center h-100 shadow-sm">
+                                <i class="fas fa-gift fa-2x text-danger mb-2"></i>
+                                <h6>Rewards</h6>
+                                <p class="small text-muted">Redeem points</p>
+                                <button class="btn btn-sm btn-outline-dark">View</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold mb-3">${isAr ? 'ألعب واربح' : 'Play & Win'}</h5>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="game-box" onclick="game.openSpin()">
+                                <i class="fas fa-dharmachakra fa-3x text-primary mb-2"></i>
+                                <h6>${app.t('game_spin')}</h6>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="game-box" onclick="$('#mysteryModal').modal('show')">
+                                <i class="fas fa-box-open fa-3x text-info mb-2"></i>
+                                <h6>${app.t('game_mystery')}</h6>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            },
+
+            renderProfile($container) {
+                const isAr = state.lang === 'ar';
+                $container.html(`
+                    <div class="card p-4 shadow-sm text-center mb-3">
+                        <div class="bg-secondary rounded-circle mx-auto d-flex align-items-center justify-content-center text-white mb-3" style="width:80px; height:80px; font-size:2rem">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h4>Guest User</h4>
+                        <p class="text-muted">+1 234 567 890</p>
+                    </div>
+                    
+                    <div class="list-group shadow-sm">
+                        <button class="list-group-item list-group-item-action d-flex justify-content-between" onclick="app.router('cart')">
+                            <span><i class="fas fa-shopping-bag me-2"></i> ${app.t('cart_title')}</span>
+                            <i class="fas fa-chevron-left text-muted"></i>
+                        </button>
+                        <button class="list-group-item list-group-item-action d-flex justify-content-between">
+                            <span><i class="fas fa-cog me-2"></i> ${isAr ? 'الإعدادات' : 'Settings'}</span>
+                            <i class="fas fa-chevron-left text-muted"></i>
+                        </button>
+                        <button class="list-group-item list-group-item-action d-flex justify-content-between text-danger" onclick="app.router('admin')">
+                            <span><i class="fas fa-lock me-2"></i> ${app.t('admin_dash')}</span>
+                            <i class="fas fa-chevron-left text-muted"></i>
+                        </button>
+                    </div>
+                `);
+            }
+        };
+
+        /* =======================================================
+           GAMIFICATION LOGIC
+           ======================================================= */
+        const game = {
+            dailyLogin() {
+                const today = new Date().toDateString();
+                if (state.lastLogin !== today) {
+                    state.lastLogin = today;
+                    state.userPoints += 10;
+                    localStorage.setItem('lastLogin', state.lastLogin);
+                    localStorage.setItem('userPoints', state.userPoints);
+                    
+                    const isAr = state.lang === 'ar';
+                    alert(isAr ? 'تمت إضافة 10 نقاط!' : '+10 Points Added!');
+                    
+                    app.router('loyalty');
+                }
+            },
+
+            openSpin() {
+                $('#spinModal').modal('show');
+                $('#wheel').css('transform', 'rotate(0deg)');
+                $('#spin-btn').prop('disabled', false).text('SPIN NOW');
+            },
+
+            spinWheel() {
+                const deg = 1800 + Math.floor(Math.random() * 360); // 5 spins + random
+                $('#wheel').css('transform', `rotate(${deg}deg)`);
+                $('#spin-btn').prop('disabled', true).text('Spinning...');
+
+                setTimeout(() => {
+                    const points = Math.floor(Math.random() * 20) + 5;
+                    state.userPoints += points;
+                    localStorage.setItem('userPoints', state.userPoints);
+                    
+                    const isAr = state.lang === 'ar';
+                    alert(`You won ${points} points!`);
+                    $('#spinModal').modal('hide');
+                    app.router('loyalty');
+                }, 4000);
+            },
+
+            openBox(id) {
+                const prizes = ['10 Points', '5% Discount', 'Free Drink', 'Try Again'];
+                const prize = prizes[Math.floor(Math.random() * prizes.length)];
+                
+                $('#box-result').removeClass('hidden').text(`You found: ${prize}`);
+                
+                if (prize.includes('Points')) {
+                    const pts = parseInt(prize);
+                    state.userPoints += pts;
+                    localStorage.setItem('userPoints', state.userPoints);
+                }
+            }
+        };
+
+        // Initialize Game Events
+        $('#spin-btn').on('click', () => game.spinWheel());
+
+        /* =======================================================
+           ADMIN DASHBOARD LOGIC
+           ======================================================= */
+        const admin = {
+            showTab(tab) {
+                $('.list-group-item').removeClass('active');
+                $(`button[onclick="admin.showTab('${tab}')"]`).addClass('active');
+                
+                if (tab === 'overview') this.renderOverview();
+                if (tab === 'orders') this.renderOrders();
+                if (tab === 'menu') this.renderMenuManager();
+                if (tab === 'settings') this.renderSettings();
+            },
+
+            renderOverview() {
+                const totalOrders = state.orders.length;
+                const revenue = state.orders.reduce((sum, o) => sum + o.total, 0);
+                
+                $('#admin-content').html(`
+                    <h3>Dashboard Overview</h3>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h6>${app.t('stats_orders')}</h6>
+                                <h2 class="fw-bold">${totalOrders}</h2>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h6>${app.t('stats_rev')}</h6>
+                                <h2 class="fw-bold">${app.formatPrice(revenue)}</h2>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h6>Customers</h6>
+                                <h2 class="fw-bold">12</h2>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <h6>Loyalty Points Issued</h6>
+                                <h2 class="fw-bold">1,450</h2>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            },
+
+            renderOrders() {
+                $('#admin-content').html(`
+                    <h3>Orders Management</h3>
+                    <div class="table-responsive bg-white p-3 rounded shadow-sm mt-3">
+                        <table class="table align-middle">
+                            <thead><tr><th>ID</th><th>Customer</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                            <tbody>
+                                ${state.orders.map(o => `
+                                    <tr>
+                                        <td>#${o.id}</td>
+                                        <td>${o.customer}<br><small class="text-muted">${o.date}</small></td>
+                                        <td>${app.formatPrice(o.total)}</td>
+                                        <td><span class="badge bg-${o.status === 'Delivered' ? 'success' : 'warning'}">${o.status}</span></td>
+                                        <td><button class="btn btn-sm btn-light"><i class="fas fa-eye"></i></button></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `);
+            },
+
+            renderMenuManager() {
+                $('#admin-content').html(`
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3>Menu Manager</h3>
+                        <button class="btn btn-primary"><i class="fas fa-plus"></i> Add Product</button>
+                    </div>
+                    <div class="row mt-3">
+                        ${state.products.map(p => `
+                            <div class="col-md-3 mb-3">
+                                <div class="card h-100">
+                                    <img src="${p.img}" class="card-img-top" style="height:150px; object-fit:cover">
+                                    <div class="card-body">
+                                        <h6>${p.name}</h6>
+                                        <p>${app.formatPrice(p.price)}</p>
+                                        <button class="btn btn-sm btn-outline-danger w-100">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `);
+            },
+
+            renderSettings() {
+                $('#admin-content').html(`
+                    <h3>Platform Settings</h3>
+                    <div class="card p-4 mt-3 shadow-sm">
+                        <div class="mb-3">
+                            <label>Restaurant Name</label>
+                            <input type="text" class="form-control" value="${APP_CONFIG.restaurantName}">
+                        </div>
+                        <div class="mb-3">
+                            <label>Primary Color</label>
+                            <input type="color" class="form-control form-control-color" value="${APP_CONFIG.primaryColor}">
+                        </div>
+                        <button class="btn btn-primary">Save Changes</button>
+                    </div>
+                `);
+            }
+        };
+
+        // Start Application
+        $(document).ready(() => {
+            app.init();
+        });
+
+    </script>
+</body>
+</html>
